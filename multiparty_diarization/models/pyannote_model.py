@@ -14,6 +14,13 @@ class PyannoteDiarization(DiarizationModel):
             device: str = 'cpu'
         ):
 
+        """Creates PyannoteDiarization instance
+        
+        Args:
+            model_name (str): name of pretrained Pyannote model to use
+            device (str): device to run evaluation on (cpu or gpu)
+        """
+
         super().__init__()
 
         self.device = device
@@ -27,6 +34,16 @@ class PyannoteDiarization(DiarizationModel):
         self._model = self._model.to(torch.device(device))
 
     def __call__(self, waveform: torch.tensor, sample_rate: int):
+
+        """Applies diariazation to audio signal
+        
+        Args:
+            waveform (torch.tensor): audio array of shape (channels, samples)
+            sample_rate (int): audio sampling rate
+
+        Returns:
+            results (list): list of tuples for each segment of the form (speaker, start, end)
+        """
 
         assert waveform.shape[0] == 1, 'only single channel audio supported'
 
