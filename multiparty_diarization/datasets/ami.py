@@ -4,16 +4,26 @@ import librosa
 import xml.etree.ElementTree as ET
 import torch
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 import os
 
 class AMI(DiarizationDataset):
+
+    """Class for AMI Dataset"""
 
     def __init__(self, 
                 root_path: str, 
                 sample_len_s: float = 15.0,
                 min_speaker_gap_s: float = 1.0 
                 ):
+        
+        """Create instance of AMI dataset
+        
+        Args:
+            root_path (str): path to AMI dataset directory
+            sample_len_s (float): target length of each sample
+            min_speaker_gap_s: minimum interval of non-speech to separate speaker segments
+        """
 
         self.root_path = root_path
         self.sample_len_s = sample_len_s
@@ -32,7 +42,14 @@ class AMI(DiarizationDataset):
         # Generate samples
         self._generate_samples(meeting_word_XML_files)
 
-    def _generate_samples(self, meeting_word_XML_files: dict):
+    def _generate_samples(self, meeting_word_XML_files: Dict[List]):
+        
+        """Generates diarization samples
+        
+        Args:
+            meeting_word_XML_files (dict): dict mapping meeting IDs to list of XML files (one per speaker)
+            that contains the word-level segmentations.
+        """
 
         self.samples = []
         self.sample_info = []
@@ -50,10 +67,16 @@ class AMI(DiarizationDataset):
             self.samples += meeting_samples
             self.sample_info += meeting_sample_info
 
+    def _parse_speaker_segments(self, speaker_word_file: str) -> List[Tuple[float, float]]:
 
-    def _parse_speaker_segments(self, speaker_word_file: str):
+        """Determine speech intervals for a given speaker
+        
+        Args:
+            speaker_word_file (str): path to word-level XML file for speaker
 
-        """Determine speech intervals for a given speaker"""
+        Returns:
+            speaker_segments (list): list of tuples marking speech intervals [(start, end)]
+        """
 
         tree = ET.parse(speaker_word_file)
         root = tree.getroot()
@@ -82,7 +105,18 @@ class AMI(DiarizationDataset):
 
         return segments
     
-    def _generate_meeting_samples(self, speaker_segments: dict, meeting_ID: str):
+    def _generate_meeting_samples(self, speaker_segments: dict, meeting_ID: str) -> Tuple[list, list]:
+
+        """Generates samples for a single meeting
+        
+        Args:
+            speaker_segments (dict): dictionary mapping speaker ID to their speaking segments
+            
+            meeting_ID (str): meeting ID
+
+        Returns:
+            (list, list): list of samples (speaker, start, end) and list of info dict for each sample
+        """
 
         samples = []
         sample_info = []
@@ -135,8 +169,11 @@ class AMI(DiarizationDataset):
             )
 
         return samples, sample_info
-
-
+    
+    def _normalize_sample(self, sample, sample_info):
+        start = sample_info['start']
+        sample = [(spkr, raw_start - start, raw_end - start) for spkr, raw_start, raw_end in sample]
+        return sample
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -145,13 +182,15 @@ class AMI(DiarizationDataset):
         
         sample, sample_info = self.samples[idx], self.sample_info[idx]
 
+        sample = self._normalize_sample(sample, sample_info)
+
         # TODO add multi-channel support
         # Load audio, assummes a single-channel beamformed file named 'beamform.wav'
         audio_path = os.path.join(self.root_path, sample_info['meeting_ID'], 'audio', "beamform.wav")
         
         audio, _ = librosa.load(audio_path, 
-                offset = sample_info['starttime'], 
-                duration = sample_info['endtime'] - sample_info['starttime'],
+                offset = sample_info['start'], 
+                duration = sample_info['end'] - sample_info['start'],
                 sr = 16000
                 )
 
@@ -169,12 +208,12 @@ if __name__ == "__main__":
 
     print('Dataset generation complete')
 
-    #audio, segments = dset[ randint(0, len(dset)) ]
+    audio, segments = dset[ randint(0, len(dset)) ]
     
-    #for segment in segments:
-        #print("SPEAKER %s <%.2f - %.2f>" % segment)
+    for segment in segments:
+        print("SPEAKER %s <%.2f - %.2f>" % segment)
 
-    #torchaudio.save('sample.wav', audio, 16000)
+    torchaudio.save('sample.wav', audio, 16000)
 
 
 
