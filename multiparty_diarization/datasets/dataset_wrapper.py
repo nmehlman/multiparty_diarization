@@ -14,7 +14,7 @@ class DiarizationDataset(Dataset):
         """Compute number of samples in dataset"""
         raise NotImplementedError
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, List[Tuple[str, float, float]]]:
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, List[Tuple[str, float, float]], dict]:
         """Get sample from dataset by index
         
         Args:
@@ -22,7 +22,8 @@ class DiarizationDataset(Dataset):
 
         Returns:
             sample (tuple): first element is the audio waveform as a torch.Tensor with shape = (channels, samples)
-            and second item is a list of true diarization intervals of the form (speaker, start, end)
+            Second item is a list of true diarization intervals of the form (speaker, start, end). 
+            Third item is a dict with additional sample info
         """
         raise NotImplementedError
 

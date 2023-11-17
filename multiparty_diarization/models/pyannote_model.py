@@ -1,4 +1,4 @@
-from model_wrapper import DiarizationModel
+from multiparty_diarization.models.model_wrapper import DiarizationModel
 from pyannote.audio import Pipeline
 import os
 import torch

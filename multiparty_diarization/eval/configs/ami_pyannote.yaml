@@ -1,0 +1,17 @@
+model: 'pyannote'
+
+model_kwargs:
+  model_name: "pyannote/speaker-diarization-3.0"
+  device: 'cuda:0'
+
+dataset: 'ami'
+
+dataset_kwargs:
+  root_path: '/proj/disney/amicorpus'
+  sample_len_s: 15.0
+  min_speaker_gap_s: 1.0 
+
+diarize_kwargs:
+  sample_rate: 16000
+
+save_path: "/home/nmehlman/disney/multiparty_diarization/results/ami_pyannote.json"

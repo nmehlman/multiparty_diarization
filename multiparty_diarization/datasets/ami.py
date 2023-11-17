@@ -1,4 +1,4 @@
-from dataset_wrapper import DiarizationDataset
+from multiparty_diarization.datasets.dataset_wrapper import DiarizationDataset
 from xml.etree import ElementTree
 import librosa
 import xml.etree.ElementTree as ET
@@ -42,7 +42,7 @@ class AMI(DiarizationDataset):
         # Generate samples
         self._generate_samples(meeting_word_XML_files)
 
-    def _generate_samples(self, meeting_word_XML_files: Dict[List]):
+    def _generate_samples(self, meeting_word_XML_files: Dict[str, List]):
         
         """Generates diarization samples
         
@@ -178,7 +178,7 @@ class AMI(DiarizationDataset):
     def __len__(self) -> int:
         return len(self.samples)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, List[Tuple[str, float, float]]]: 
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, List[Tuple[str, float, float]], dict]: 
         
         sample, sample_info = self.samples[idx], self.sample_info[idx]
 
@@ -196,7 +196,7 @@ class AMI(DiarizationDataset):
 
         audio = torch.from_numpy(audio).unsqueeze(0)
 
-        return audio, sample
+        return audio, sample, sample_info
                 
 if __name__ == "__main__":
 
