@@ -1,0 +1,22 @@
+model: 'nemo'
+
+model_kwargs:
+  config_path: "/home/nmehlman/disney/multiparty_diarization/multiparty_diarization/models/nemo_config.yaml"
+  pretrained_vad_model: 'vad_multilingual_marblenet'
+  pretrained_speaker_model: 'titanet_large'
+  pretrained_neural_diarizer_model: 'diar_msdd_telephonic'
+  tmp_dir: "/home/nmehlman/disney/multiparty_diarization/tmp"
+  device: 'cuda'  
+
+dataset: 'ami'
+
+dataset_kwargs:
+  root_path: '/proj/disney/amicorpus'
+  sample_len_s: 15.0
+  min_speaker_gap_s: 1.0 
+
+diarize_kwargs:
+  sample_rate: 16000
+
+save_dir: "/home/nmehlman/disney/multiparty_diarization/results/ami_nemo/raw_results.json"
+

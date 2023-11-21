@@ -14,4 +14,4 @@ dataset_kwargs:
 diarize_kwargs:
   sample_rate: 16000
 
-save_path: "/home/nmehlman/disney/multiparty_diarization/results/ami_pyannote.json"
+save_dir: "/home/nmehlman/disney/multiparty_diarization/results/ami_pyannote/raw_results.json"
