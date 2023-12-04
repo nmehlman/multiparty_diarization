@@ -18,5 +18,5 @@ dataset_kwargs:
 diarize_kwargs:
   sample_rate: 16000
 
-save_dir: "/home/nmehlman/disney/multiparty_diarization/results/ami_nemo/raw_results.json"
+save_dir: "/home/nmehlman/disney/multiparty_diarization/results/ami_nemo/"
 

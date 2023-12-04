@@ -40,7 +40,6 @@ class NEMO_Diarization(DiarizationModel):
 
         # Set temp directory for model outputs
         config.diarizer.out_dir = self.tmp_dir
-        print(self.tmp_dir)
 
         # Load model
         self._model = ClusteringDiarizer(config).to(device)
@@ -52,7 +51,7 @@ class NEMO_Diarization(DiarizationModel):
         
         # Need to save waveform to file to conform with NEMO interface
         audio_path = os.path.join(self.tmp_dir, 'tmp_audio.wav')
-        torchaudio.save( audio_path, waveform, sample_rate ) 
+        torchaudio.save( audio_path, waveform/waveform.max(), sample_rate ) 
 
         # Run diarization
         audio_files = [audio_path]

@@ -52,13 +52,13 @@ if __name__ == "__main__":
     # Save
     json.dump(
         sample_results,
-        open( os.path.join(config['save_path'], 'raw_results.json'), 'w'),
+        open( os.path.join(config['save_dir'], 'raw_results.json'), 'w'),
         indent = 3
     )
 
     json.dump(
         sample_results,
-        open( os.path.join(config['save_path'], 'config.json'), 'w'),
+        open( os.path.join(config['save_dir'], 'config.json'), 'w'),
         indent = 3
     )
 
