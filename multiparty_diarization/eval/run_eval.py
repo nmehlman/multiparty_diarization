@@ -6,7 +6,7 @@ from multiparty_diarization.eval.metrics import compute_sample_diarization_metri
 
 import tqdm
 import json
-import pdb
+import sys
 
 import os
 
@@ -19,9 +19,9 @@ MODELS = {
     "nemo": NEMO_Diarization
 }
 
-CONFIG_PATH = "./configs/ami_nemo.yaml"
-
 if __name__ == "__main__":
+
+    CONFIG_PATH = sys.argv[1]
 
     # Load eval config
     config = load_configs(CONFIG_PATH)

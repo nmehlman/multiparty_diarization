@@ -51,7 +51,7 @@ class NEMO_Diarization(DiarizationModel):
         
         # Need to save waveform to file to conform with NEMO interface
         audio_path = os.path.join(self.tmp_dir, 'tmp_audio.wav')
-        torchaudio.save( audio_path, waveform/waveform.max(), sample_rate ) 
+        torchaudio.save( audio_path, waveform, sample_rate ) 
 
         # Run diarization
         audio_files = [audio_path]
@@ -69,14 +69,39 @@ class NEMO_Diarization(DiarizationModel):
 
 if __name__ == "__main__":
 
+    import os
+    import wget
     import torchaudio
-
-    waveform, fs = torchaudio.load('../../misc/test_audio.wav')
-
-    model = NEMO_Diarization(config_path='nemo_config.yaml', device='cuda:0')
+    from shutil import rmtree
+    from multiparty_diarization.eval.metrics import compute_sample_diarization_metrics
     
-    results = model(waveform, fs)
+    ROOT = "/home/nmehlman/disney/multiparty_diarization/misc"
+    data_dir = os.path.join(ROOT,'data')
+    os.makedirs(data_dir, exist_ok=True)
+    an4_audio = os.path.join(data_dir,'an4_diarize_test.wav')
+    an4_rttm = os.path.join(data_dir,'an4_diarize_test.rttm')
+    
+    if not os.path.exists(an4_audio):
+        an4_audio_url = "https://nemo-public.s3.us-east-2.amazonaws.com/an4_diarize_test.wav"
+        an4_audio = wget.download(an4_audio_url, data_dir)
+    if not os.path.exists(an4_rttm):
+        an4_rttm_url = "https://nemo-public.s3.us-east-2.amazonaws.com/an4_diarize_test.rttm"
+        an4_rttm = wget.download(an4_rttm_url, data_dir)
+    
+    waveform, fs = torchaudio.load('../../misc/data/an4_diarize_test.wav')
 
-    print('\n*** Diarization Results ***')
-    for spkr, start, end in results:
-        print(f'SPEAKER {spkr}: [{start:.2f} -->> {end:.2f}]')
+    labels = rttm_to_labels(an4_rttm) # True labels
+    reference = [ (spkr.split('_')[-1], speech_turn.start, speech_turn.end)
+                for speech_turn, _, spkr 
+                in labels_to_pyannote_object(labels).itertracks(yield_label=True)
+                ]
+    
+    model = NEMO_Diarization(config_path='./nemo_config.yaml', device='cuda:0')
+    
+    hypothesis = model(waveform, fs)
+    
+    metrics = compute_sample_diarization_metrics(reference, hypothesis)
+
+    print(metrics)
+
+    rmtree('./tmp')
