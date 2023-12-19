@@ -1,5 +1,7 @@
 model: 'pyannote'
 
+use_oracle: false
+
 model_kwargs:
   model_name: "pyannote/speaker-diarization-3.0"
   device: 'cuda:0'

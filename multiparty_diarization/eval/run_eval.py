@@ -31,18 +31,22 @@ if __name__ == "__main__":
     dataset = DATASETS[ config['dataset'] ](**config["dataset_kwargs"])
 
     sample_results = []
-    for audio, reference, info in tqdm.tqdm(dataset, total=len(dataset), desc='running diarization'):
+    for i, (audio, reference, info) in tqdm.tqdm(enumerate(dataset), total=len(dataset), desc='running diarization'):
         
         # Run diarization and compute metrics
         try:
-            hypothesis = model(audio, **config['diarize_kwargs'])
+            if config['use_oracle']:
+                oracle_info = dataset.generate_oracle_info(i)
+                hypothesis = model(audio, **config['diarize_kwargs'], **oracle_info)
+            else:
+                hypothesis = model(audio, **config['diarize_kwargs'])
             results = compute_sample_diarization_metrics(reference, hypothesis)
         except IndexError: # Handel corner cases 
             results = {
                 "der": 1.0,
                 "miss": 1.0,
-                "false_alarm": 0.0,
-                "confidence": 0.0,
+                "false_alarm": 1.0,
+                "confusion": 1.0,
             }
             
         results['info'] = info

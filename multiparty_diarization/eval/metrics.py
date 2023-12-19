@@ -14,7 +14,7 @@ def compute_sample_diarization_metrics(
         "der": metrics.der,
         "miss": metrics.miss,
         "false_alarm": metrics.falarm,
-        "confidence": metrics.conf
+        "confusion": metrics.conf
     }
 
     return results

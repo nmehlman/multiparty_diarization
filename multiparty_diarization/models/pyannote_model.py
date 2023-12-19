@@ -10,7 +10,7 @@ class PyannoteDiarization(DiarizationModel):
 
     def __init__(
             self, 
-            model_name: str = "pyannote/speaker-diarization-3.0",
+            model_name: str = "pyannote/speaker-diarization-3.1",
             device: str = 'cpu'
         ):
 
@@ -33,13 +33,14 @@ class PyannoteDiarization(DiarizationModel):
         # Move to device (cpu or gpu)
         self._model = self._model.to(torch.device(device))
 
-    def __call__(self, waveform: torch.tensor, sample_rate: int):
+    def __call__(self, waveform: torch.tensor, sample_rate: int, **oracle_info):
 
         """Applies diariazation to audio signal
         
         Args:
             waveform (torch.tensor): audio array of shape (channels, samples)
             sample_rate (int): audio sampling rate
+            oracle_info (dict): optional info for oracle
 
         Returns:
             results (list): list of tuples for each segment of the form (speaker, start, end)
@@ -51,7 +52,11 @@ class PyannoteDiarization(DiarizationModel):
 
         audio_in_memory = {"waveform": waveform, "sample_rate": sample_rate}
 
-        diarization = self._model(audio_in_memory)
+        num_speakers = oracle_info.get(num_speakers, None)
+        if num_speakers is not None:
+            diarization = self._model(audio_in_memory, num_speakers=num_speakers)
+        else:
+            diarization = self._model(audio_in_memory)
 
         results = [ (str(spkr), speech_turn.start, speech_turn.end)
             for speech_turn, spkr, _ in diarization.itertracks(yield_label=True)

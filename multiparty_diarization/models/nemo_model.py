@@ -4,8 +4,11 @@ from multiparty_diarization.models.model_wrapper import DiarizationModel
 from nemo.collections.asr.models import ClusteringDiarizer
 from nemo.collections.asr.parts.utils.speaker_utils import rttm_to_labels, labels_to_pyannote_object
 import yaml
+from multiparty_diarization.datasets.dataset_wrapper import DiarizationDataset
 from omegaconf import DictConfig
 import os
+import json
+from shutil import rmtree
 
 import torchaudio
 
@@ -16,6 +19,8 @@ class NEMO_Diarization(DiarizationModel):
                 pretrained_vad_model: str = 'vad_multilingual_marblenet',
                 pretrained_speaker_model: str = 'titanet_large',
                 pretrained_neural_diarizer_model: str = 'diar_msdd_telephonic',
+                use_oracle_vad: bool = False,
+                use_oracle_num_speakers: bool = False,
                 tmp_dir: str = "./tmp",
                 device: str = 'cpu'  
             ):
@@ -24,6 +29,8 @@ class NEMO_Diarization(DiarizationModel):
 
         self.tmp_dir = tmp_dir
         self.device = device
+        self.use_oracle_vad = use_oracle_vad
+        self.use_oracle_num_speakers = use_oracle_num_speakers
 
         # Load config
         config = DictConfig(
@@ -33,10 +40,12 @@ class NEMO_Diarization(DiarizationModel):
                 )
             )
         
-        # Select pretrained models
+        # Modify config based on kwargs
         config.diarizer.vad.model_path=pretrained_vad_model
         config.diarizer.speaker_embeddings.model_path=pretrained_speaker_model 
         config.diarizer.msdd_model.model_path=pretrained_neural_diarizer_model
+        config.diarizer.clustering.parameters.oracle_num_speakers=use_oracle_num_speakers
+        config.diarizer.oracle_vad=use_oracle_vad
 
         # Set temp directory for model outputs
         config.diarizer.out_dir = self.tmp_dir
@@ -44,18 +53,50 @@ class NEMO_Diarization(DiarizationModel):
         # Load model
         self._model = ClusteringDiarizer(config).to(device)
 
-        if not os.path.exists(tmp_dir):
-            os.mkdir(tmp_dir)
-
-    def __call__(self, waveform: torch.tensor, sample_rate: int) -> List[Tuple[str, float, float]]:
+    def __call__(self, waveform: torch.tensor, sample_rate: int, **oracle_info) -> List[Tuple[str, float, float]]:
         
+        # Make tmp directory if needed
+        if not os.path.exists(self.tmp_dir):
+            os.mkdir(self.tmp_dir)
+
         # Need to save waveform to file to conform with NEMO interface
         audio_path = os.path.join(self.tmp_dir, 'tmp_audio.wav')
         torchaudio.save( audio_path, waveform, sample_rate ) 
 
-        # Run diarization
-        audio_files = [audio_path]
-        self._model.diarize(audio_files)
+        if self.use_oracle_vad or self.use_oracle_num_speakers: # Generate manifest
+
+            assert oracle_info, 'oracle info required with use_oracle_vad set to True'
+
+            # Create RTTM file
+            rttm_path = os.path.join(self.tmp_dir, 'segment.rttm')
+            with open(rttm_path, 'w') as rttm_file:
+                for segment in oracle_info['segments']:
+                    speaker, start, end = segment
+                    line = f"SPEAKER {audio_path} 1 {start} {end} <NA> <NA> {speaker} <NA> <NA>\n"
+                    rttm_file.write(line)
+
+            # Create manifest
+            manifest_path = os.path.join(self.tmp_dir, 'manifest.json')
+            manifest = {
+                'audio_filepath': audio_path, 
+                'offset': 0, 
+                'duration': None, 
+                'label': 'infer', 
+                'text': '-', 
+                'num_speakers': oracle_info['n_speakers'], 
+                'rttm_filepath': rttm_path, 
+                'uem_filepath' : None
+            }
+
+            json.dump(manifest, open(manifest_path, 'w'))
+
+            self._model._diarizer_params.manifest_filepath = manifest_path # Link manifest
+
+            self._model.diarize() # Run diarization
+
+        else: # No oracle info, run on raw audio
+            audio_files = [audio_path] # Run diarization
+            self._model.diarize(audio_files)
 
         labels = rttm_to_labels(os.path.join(self.tmp_dir, 'pred_rttms', 'tmp_audio.rttm'))
         diarization = labels_to_pyannote_object(labels)
@@ -63,6 +104,9 @@ class NEMO_Diarization(DiarizationModel):
         results = [ (spkr.split('_')[-1], speech_turn.start, speech_turn.end)
                 for speech_turn, _, spkr in diarization.itertracks(yield_label=True)
                 ]
+        
+        # Remove tmp directory
+        rmtree(self.tmp_dir)
 
         return results
 

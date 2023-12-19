@@ -28,6 +28,7 @@ class AMI(DiarizationDataset):
         self.root_path = root_path
         self.sample_len_s = sample_len_s
         self.min_speaker_gap_s = min_speaker_gap_s
+        self.sample_rate = 16000
 
         word_dir = os.path.join(root_path, 'words') # Contains transcript info
         meeting_IDs = [subdir for subdir in next(os.walk(root_path))[1] if subdir[0].isupper()] # List all meetings
@@ -177,6 +178,48 @@ class AMI(DiarizationDataset):
 
     def __len__(self) -> int:
         return len(self.samples)
+    
+    def generate_oracle_info(self, idx: int):
+
+        sample, sample_info = self.samples[idx], self.sample_info[idx]
+        sample = self._normalize_sample(sample, sample_info)
+
+        audio_path = os.path.join(self.root_path, sample_info['meeting_ID'], 'audio', "beamform.wav")
+
+        oracle_info = {
+            "audio_filepath": audio_path,
+            "sample_start": sample_info['start'],
+            "sample_end": sample_info['end'],
+            "n_speakers": sample_info['n_speakers'], 
+            "segments": sample
+        }
+        
+        return oracle_info
+    
+    def generate_sample_rttm(self, idx: int):
+
+        sample, sample_info = self.samples[idx], self.sample_info[idx]
+
+        audio_file = os.path.join(self.root_path, sample_info['meeting_ID'], 'audio', "beamform.wav")
+        segment_start = sample_info['start']
+
+        manifest_lines = []
+        for segment in sample:
+            speaker, start, end = segment
+            start_abs = start + segment_start
+            end_abs = end + segment_start
+            line = f"SPEAKER {audio_file} 1 {start_abs} {end_abs} <NA> <NA> {speaker} <NA> <NA>\n"
+            manifest_lines.append(line)
+
+        return manifest_lines
+
+    def generate_rttm_file(self, output_path: str):
+
+        with open(output_path, 'w') as outfile:
+            for i in range(len(self.samples)):
+                for line in self.generate_sample_rttm(i):
+                    outfile.write(line)
+
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, List[Tuple[str, float, float]], dict]: 
         
@@ -191,7 +234,7 @@ class AMI(DiarizationDataset):
         audio, _ = librosa.load(audio_path, 
                 offset = sample_info['start'], 
                 duration = sample_info['end'] - sample_info['start'],
-                sr = 16000
+                sr = self.sample_rate
                 )
 
         audio = torch.from_numpy(audio).unsqueeze(0)
@@ -208,12 +251,11 @@ if __name__ == "__main__":
 
     print('Dataset generation complete')
 
-    audio, segments = dset[ randint(0, len(dset)) ]
+    audio, segments, info = dset[ randint(0, len(dset)) ]
     
     for segment in segments:
         print("SPEAKER %s <%.2f - %.2f>" % segment)
 
-    torchaudio.save('sample.wav', audio, 16000)
+    #torchaudio.save('sample.wav', audio, 16000)
 
-
-
+    dset.generate_rttm_file('test.rttm')
