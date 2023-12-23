@@ -10,7 +10,8 @@ class PyannoteDiarization(DiarizationModel):
 
     def __init__(
             self, 
-            model_name: str = "pyannote/speaker-diarization-3.1",
+            model_name: str = "pyannote/speaker-diarization-3.0",
+            use_oracle_num_speakers: bool = False,
             device: str = 'cpu'
         ):
 
@@ -18,11 +19,13 @@ class PyannoteDiarization(DiarizationModel):
         
         Args:
             model_name (str): name of pretrained Pyannote model to use
+            use_oracle_num_speakers (bool): use the true number of speakers during inference
             device (str): device to run evaluation on (cpu or gpu)
         """
 
         super().__init__()
 
+        self.use_oracle_num_speakers = use_oracle_num_speakers
         self.device = device
 
         # Load pipeline
@@ -52,9 +55,8 @@ class PyannoteDiarization(DiarizationModel):
 
         audio_in_memory = {"waveform": waveform, "sample_rate": sample_rate}
 
-        num_speakers = oracle_info.get(num_speakers, None)
-        if num_speakers is not None:
-            diarization = self._model(audio_in_memory, num_speakers=num_speakers)
+        if self.use_oracle_num_speakers:
+            diarization = self._model(audio_in_memory, num_speakers=oracle_info['n_speakers'])
         else:
             diarization = self._model(audio_in_memory)
 

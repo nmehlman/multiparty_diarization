@@ -27,3 +27,15 @@ class DiarizationDataset(Dataset):
         """
         raise NotImplementedError
 
+    def generate_oracle_info(self, idx: int) -> dict:
+        """Return oracle info for sample based on idx
+
+         Args:
+            idx (int): index of desired samples
+
+        Returns:
+            info (dict): information needed for oracle evaluation
+        """
+        
+        raise NotImplementedError
+

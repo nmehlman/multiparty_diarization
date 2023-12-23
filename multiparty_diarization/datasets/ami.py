@@ -179,7 +179,7 @@ class AMI(DiarizationDataset):
     def __len__(self) -> int:
         return len(self.samples)
     
-    def generate_oracle_info(self, idx: int):
+    def generate_oracle_info(self, idx: int) -> dict:
 
         sample, sample_info = self.samples[idx], self.sample_info[idx]
         sample = self._normalize_sample(sample, sample_info)
