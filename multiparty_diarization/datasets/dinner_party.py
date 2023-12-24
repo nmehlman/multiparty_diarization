@@ -7,6 +7,25 @@ import numpy as np
 from typing import List, Tuple, Dict
 import os
 
+def time_to_seconds(time_str):
+    """
+    Convert a time string in the format HH:MM:SS.ss to seconds (float).
+
+    Args:
+    time_str (str): A time string in the format HH:MM:SS.ss
+
+    Returns:
+    float: The time in seconds.
+    """
+    hours, minutes, seconds = time_str.split(':')
+    hours = int(hours)
+    minutes = int(minutes)
+    seconds = float(seconds)
+    
+    total_seconds = hours * 3600 + minutes * 60 + seconds
+    return total_seconds
+
+
 class DinnerParty(DiarizationDataset):
 
     """Class for Dinner Party Dataset"""
@@ -30,6 +49,11 @@ class DinnerParty(DiarizationDataset):
         self.transcript_dir = os.path.join(root_path, 'transcriptions', split)
         self._generate_samples()
 
+    def _mean_start_time(self, utterance):
+        return np.mean([time_to_seconds(time_str) for time_str in utterance['start_time'].values()])
+
+    def _mean_end_time(self, utterance):
+        return np.mean([time_to_seconds(time_str) for time_str in utterance['end_time'].values()])
     
     def _generate_samples(self):
 
@@ -40,13 +64,17 @@ class DinnerParty(DiarizationDataset):
     
             full_path = os.path.join(self.transcript_dir, session_file)
             session_data = json.load(open(full_path))
+
+            # Sort utterances by start time
+            session_data = sorted(session_data, key = self._mean_start_time)
             
             current_sample = None
             for utterance in session_data:
                 
                 spkr = utterance['speaker_id']
-                utt_start = np.mean(list(utterance['start_time'].values()))
-                utt_end = np.mean(list(utterance['end_time'].values()))
+                session = utterance['session_id']
+                utt_start = self._mean_start_time(utterance)
+                utt_end = self._mean_end_time(utterance)
 
                 if current_sample is None: # Initialize new sample
                     
@@ -54,12 +82,25 @@ class DinnerParty(DiarizationDataset):
                     current_sample_len = utt_end - utt_start
                     current_sample = [(spkr, 0.0, utt_end - sample_start)]
 
-                if current_sample_len >= self.sample_len_s:
+                else: # Continue sample
+                    current_sample.append(((spkr, utt_start - sample_start, utt_end - sample_start)))
+                    current_sample_len = utt_end - sample_start
+
+                if current_sample_len >= self.sample_len_s: # Reached end of current sample
 
                     sample_end = utt_end
+                    
+                    self.samples.append(current_sample)
+                    self.sample_info.append(
+                        {
+                        "session_ID": session,
+                        "start": sample_start,
+                        "end": sample_end,
+                        "n_speakers": len(set([x[0] for x in current_sample]))
+                        }
+                    )
+
                     current_sample = None # Reset
-
-
 
 
     def __len__(self) -> int:
@@ -69,11 +110,9 @@ class DinnerParty(DiarizationDataset):
         
         sample, sample_info = self.samples[idx], self.sample_info[idx]
 
-        sample = self._normalize_sample(sample, sample_info)
-
         # TODO add multi-channel support
         # Load audio, assummes a single-channel beamformed file named 'beamform.wav'
-        audio_path = os.path.join(self.root_path, sample_info['meeting_ID'], 'audio', "beamform.wav")
+        audio_path = os.path.join(self.audio_dir, f"{sample_info['session_ID']}_U01.beamform.wav")
         
         audio, _ = librosa.load(audio_path, 
                 offset = sample_info['start'], 
@@ -95,7 +134,7 @@ if __name__ == "__main__":
 
     print('Dataset generation complete')
 
-    audio, segments = dset[ randint(0, len(dset)) ]
+    audio, segments, _ = dset[ randint(0, len(dset)) ]
     
     for segment in segments:
         print("SPEAKER %s <%.2f - %.2f>" % segment)

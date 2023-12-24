@@ -2,6 +2,7 @@ from multiparty_diarization.utils import load_configs
 from multiparty_diarization.models.pyannote_model import PyannoteDiarization
 from multiparty_diarization.models.nemo_model import NEMO_Diarization
 from multiparty_diarization.datasets.ami import AMI
+from multiparty_diarization.datasets.dinner_party import DinnerParty
 from multiparty_diarization.eval.metrics import compute_sample_diarization_metrics
 
 import tqdm
@@ -11,7 +12,8 @@ import sys
 import os
 
 DATASETS = {
-    "ami": AMI
+    "ami": AMI,
+    "dipco": DinnerParty
 }
 
 MODELS = {

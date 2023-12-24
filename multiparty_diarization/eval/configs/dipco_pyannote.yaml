@@ -1,0 +1,18 @@
+model: 'pyannote'
+
+use_oracle: false
+
+model_kwargs:
+  model_name: "pyannote/speaker-diarization-3.0"
+  device: 'cuda:0'
+
+dataset: 'dipco'
+
+dataset_kwargs:
+  root_path: '/proj/disney/Dipco'
+  sample_len_s: 15.0
+
+diarize_kwargs:
+  sample_rate: 16000
+
+save_dir: "/home/nmehlman/disney/multiparty_diarization/results/dipco_pyannote/raw_results.json"
