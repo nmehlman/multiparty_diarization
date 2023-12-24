@@ -2,6 +2,7 @@ from multiparty_diarization.datasets.dataset_wrapper import DiarizationDataset
 import json
 import librosa
 import torch
+import numpy as np
 
 from typing import List, Tuple, Dict
 import os
@@ -14,7 +15,6 @@ class DinnerParty(DiarizationDataset):
                 root_path: str, 
                 split: str = 'eval',
                 sample_len_s: float = 15.0,
-                min_speaker_gap_s: float = 1.0 
                 ):
         
         """Create instance of Dinner Party dataset
@@ -22,11 +22,13 @@ class DinnerParty(DiarizationDataset):
         Args:
             root_path (str): path to Dinner Party dataset directory
             sample_len_s (float): target length of each sample
-            min_speaker_gap_s: minimum interval of non-speech to separate speaker segments
         """
 
+        self.sample_len_s = sample_len_s
+
         self.audio_dir = os.path.join(root_path, 'audio', split)
-        self.transcript_dir = os.path.join(root_path, 'transcripts', split)
+        self.transcript_dir = os.path.join(root_path, 'transcriptions', split)
+        self._generate_samples()
 
     
     def _generate_samples(self):
@@ -34,7 +36,31 @@ class DinnerParty(DiarizationDataset):
         self.samples = []
         self.sample_info = []
 
-        for session_file in os.listdir()
+        for session_file in os.listdir(self.transcript_dir): # For each session
+    
+            full_path = os.path.join(self.transcript_dir, session_file)
+            session_data = json.load(open(full_path))
+            
+            current_sample = None
+            for utterance in session_data:
+                
+                spkr = utterance['speaker_id']
+                utt_start = np.mean(list(utterance['start_time'].values()))
+                utt_end = np.mean(list(utterance['end_time'].values()))
+
+                if current_sample is None: # Initialize new sample
+                    
+                    sample_start = utt_start
+                    current_sample_len = utt_end - utt_start
+                    current_sample = [(spkr, 0.0, utt_end - sample_start)]
+
+                if current_sample_len >= self.sample_len_s:
+
+                    sample_end = utt_end
+                    current_sample = None # Reset
+
+
+
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -64,7 +90,7 @@ if __name__ == "__main__":
     from random import randint
     import torchaudio
 
-    root_path = '/proj/disney/Dinner Partycorpus'
+    root_path = '/proj/disney/Dipco'
     dset = DinnerParty(root_path=root_path)
 
     print('Dataset generation complete')
