@@ -11,7 +11,7 @@ class DiarizationDataset(Dataset):
         super().__init__()
 
     def __len__(self) -> int:
-        """Compute number of samples in dataset"""
+        """Computes number of samples in dataset"""
         raise NotImplementedError
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, List[Tuple[str, float, float]], dict]:

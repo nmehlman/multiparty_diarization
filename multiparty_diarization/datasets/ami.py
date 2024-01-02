@@ -171,15 +171,38 @@ class AMI(DiarizationDataset):
 
         return samples, sample_info
     
-    def _normalize_sample(self, sample, sample_info):
+    def _normalize_sample(self, sample: List[Tuple[str, float, float]], sample_info: dict) -> List[Tuple[str, float, float]]:
+        
+        """Adjusts sample timing to use the sample start time as the zero point, rather than the file start time
+        
+        Args:
+            sample (list): list of utterances with format (speaker, start, end)
+            
+            sample_info (dict): sample-level information
+
+        Returns:
+            normalized sample (list)
+        """
+
         start = sample_info['start']
         sample = [(spkr, raw_start - start, raw_end - start) for spkr, raw_start, raw_end in sample]
         return sample
 
     def __len__(self) -> int:
+        """Computes number of samples in dataset"""
         return len(self.samples)
     
     def generate_oracle_info(self, idx: int) -> dict:
+        
+        """Populates dict with information required for oracle evaluation (speaker count, VAD)
+        of a specific sample by index.
+        
+        Args:
+            idx (int): index of desired samples
+
+        Returns:
+            oracle_info (dict)
+        """
 
         sample, sample_info = self.samples[idx], self.sample_info[idx]
         sample = self._normalize_sample(sample, sample_info)
@@ -196,7 +219,16 @@ class AMI(DiarizationDataset):
         
         return oracle_info
     
-    def generate_sample_rttm(self, idx: int):
+    def generate_sample_rttm(self, idx: int) -> list:
+
+        """Generates a list of RTTM manifest lines (strings) for a specific sample by index
+        
+        Args:
+            idx (int): index of desired samples
+
+        Returns:
+            manifest_lines (list): list of strings to be written to RTTM manifest file
+        """
 
         sample, sample_info = self.samples[idx], self.sample_info[idx]
 
@@ -204,7 +236,7 @@ class AMI(DiarizationDataset):
         segment_start = sample_info['start']
 
         manifest_lines = []
-        for segment in sample:
+        for segment in sample: # Populate with each utterance in sample
             speaker, start, end = segment
             start_abs = start + segment_start
             end_abs = end + segment_start
@@ -215,6 +247,12 @@ class AMI(DiarizationDataset):
 
     def generate_rttm_file(self, output_path: str):
 
+        """Generates RTTM file manifest for entire dataset
+        
+        Args:
+            output_path (str): path to save RTTM file 
+        """
+
         with open(output_path, 'w') as outfile:
             for i in range(len(self.samples)):
                 for line in self.generate_sample_rttm(i):
@@ -223,6 +261,17 @@ class AMI(DiarizationDataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, List[Tuple[str, float, float]], dict]: 
         
+        """Get sample from dataset by index
+        
+        Args:
+            idx (int): index of desired samples
+
+        Returns:
+            sample (tuple): first element is the audio waveform as a torch.Tensor with shape = (channels, samples)
+            Second item is a list of true diarization intervals of the form (speaker, start, end). 
+            Third item is a dict with additional sample info
+        """
+
         sample, sample_info = self.samples[idx], self.sample_info[idx]
 
         sample = self._normalize_sample(sample, sample_info)
@@ -256,6 +305,5 @@ if __name__ == "__main__":
     for segment in segments:
         print("SPEAKER %s <%.2f - %.2f>" % segment)
 
-    #torchaudio.save('sample.wav', audio, 16000)
+    torchaudio.save('sample.wav', audio, 16000)
 
-    dset.generate_rttm_file('test.rttm')

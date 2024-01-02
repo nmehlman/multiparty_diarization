@@ -50,12 +50,16 @@ class DinnerParty(DiarizationDataset):
         self._generate_samples()
 
     def _mean_start_time(self, utterance):
+        """Untility function to average start time labels across devices"""
         return np.mean([time_to_seconds(time_str) for time_str in utterance['start_time'].values()])
 
     def _mean_end_time(self, utterance):
+        """Untility function to average end time labels across devices"""
         return np.mean([time_to_seconds(time_str) for time_str in utterance['end_time'].values()])
     
     def _generate_samples(self):
+
+        """Populates samples"""
 
         self.samples = []
         self.sample_info = []
@@ -86,10 +90,11 @@ class DinnerParty(DiarizationDataset):
                     current_sample.append(((spkr, utt_start - sample_start, utt_end - sample_start)))
                     current_sample_len = utt_end - sample_start
 
-                if current_sample_len >= self.sample_len_s: # Reached end of current sample
+                if current_sample_len >= self.sample_len_s: # Reached desired duration
 
                     sample_end = utt_end
                     
+                    # Add to sample list
                     self.samples.append(current_sample)
                     self.sample_info.append(
                         {
@@ -100,18 +105,30 @@ class DinnerParty(DiarizationDataset):
                         }
                     )
 
-                    current_sample = None # Reset
+                    current_sample = None # Reset for new sample
 
 
     def __len__(self) -> int:
+        """Computes number of samples in dataset"""
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, List[Tuple[str, float, float]], dict]: 
+
+        """Get sample from dataset by index
+        
+        Args:
+            idx (int): index of desired samples
+
+        Returns:
+            sample (tuple): first element is the audio waveform as a torch.Tensor with shape = (channels, samples)
+            Second item is a list of true diarization intervals of the form (speaker, start, end). 
+            Third item is a dict with additional sample info
+        """
         
         sample, sample_info = self.samples[idx], self.sample_info[idx]
 
         # TODO add multi-channel support
-        # Load audio, assummes a single-channel beamformed file named 'beamform.wav'
+        # Load audio, assummes a single-channel beamformed file named '"{session_ID}_U01.beamform.wav"'
         audio_path = os.path.join(self.audio_dir, f"{sample_info['session_ID']}_U01.beamform.wav")
         
         audio, _ = librosa.load(audio_path, 
