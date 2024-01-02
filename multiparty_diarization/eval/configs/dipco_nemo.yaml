@@ -1,0 +1,24 @@
+model: 'nemo'
+
+use_oracle: false
+
+model_kwargs:
+  config_path: "/home/nmehlman/disney/multiparty_diarization/multiparty_diarization/models/nemo_config.yaml"
+  pretrained_vad_model: 'vad_multilingual_marblenet'
+  pretrained_speaker_model: 'titanet_large'
+  pretrained_neural_diarizer_model: 'diar_msdd_telephonic'
+  use_oracle_vad: false
+  use_oracle_num_speakers: false
+  tmp_dir: "/home/nmehlman/disney/multiparty_diarization/tmp"
+  device: 'cuda'  
+
+dataset: 'dipco'
+
+dataset_kwargs:
+  root_path: '/proj/disney/Dipco'
+  sample_len_s: 15.0
+
+diarize_kwargs:
+  sample_rate: 16000
+
+save_dir: "/home/nmehlman/disney/multiparty_diarization/results/dipco_nemo/"
