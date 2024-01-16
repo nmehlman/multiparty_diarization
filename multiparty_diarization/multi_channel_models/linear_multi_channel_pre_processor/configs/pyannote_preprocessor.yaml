@@ -6,10 +6,7 @@ task:
 
 model:
   sample_rate: 16000
-  attention_heads_cc: 4
-  attention_heads_cf: 4
-  use_pretrained_weights: true
-  freeze_encoders: true
+  num_channels: 8
   lr: 0.001
 
 trainer:
@@ -22,6 +19,6 @@ trainer:
   #overfit_batches: 32
 
 tensorboard:
-  save_dir: "/home/nmehlman/logs/pyannote_mc"
+  save_dir: "/home/nmehlman/logs/pyannote_preprocessor"
   name: "test"
-  version: null     # Automatic versioning if set to null (recommended)
+  version: 1     # Automatic versioning if set to null (recommended)

@@ -5,18 +5,19 @@ import torch.nn.functional as F
 import torch.nn as nn
 from einops import rearrange
 from multiparty_diarization.multi_channel_models.pyannote_multi_channel.utils import MutiChannelAudio
-
+import pdb
 
 class PyanNetMultiChannel(PyanNet):
    
-   """Modified version of PyanNet Pyannote model that supports multi-channel 
-   audio via cross channel and cross frame attention from https://arxiv.org/abs/2110.04694"""
+    """Modified version of PyanNet Pyannote model that supports multi-channel 
+    via cross channel and cross frame attention from https://arxiv.org/abs/2110.04694"""
 
-   def __init__(self, 
+    def __init__(self, 
                 attention_heads_cc: int = 4, 
                 attention_heads_cf: int = 4, 
                 use_pretrained_weights: bool = False,
                 freeze_encoders: bool = False,
+                lr: float = 1e-3,
                 *args, 
                 **kwargs):
 
@@ -33,6 +34,8 @@ class PyanNetMultiChannel(PyanNet):
 
             freeze_encoders (bool, optional): Freeze weights of encoder module. Defaults to False
 
+            lr (float, optional): Learning rate. Defaults to 1e-3
+            
             sample_rate (int, optional): Audio sample rate. Defaults to 16000
 
             num_channels (int, optional): Number of channels. Defaults to mono (1)
@@ -57,6 +60,8 @@ class PyanNetMultiChannel(PyanNet):
         self.specs = _model.specifications
         self.audio = MutiChannelAudio( sample_rate = kwargs.get('sample_rate', 16000) )
 
+        self.lr = lr
+
         if use_pretrained_weights: # Copy weights from pretrained model
             self.sincnet = _model.sincnet
             self.lstm = _model.lstm
@@ -67,14 +72,17 @@ class PyanNetMultiChannel(PyanNet):
         D = _model.hparams['lstm']['hidden_size'] * 2
         
         self.attention_cc = nn.MultiheadAttention(embed_dim=D, num_heads=attention_heads_cc, batch_first=True)
-        self.layer_norm_cc = nn.LayerNorm(D)
+        self.layer_norm_cc = nn.Identity()#nn.LayerNorm(D)
 
         self.attention_cf = nn.MultiheadAttention(embed_dim=D, num_heads=attention_heads_cf, batch_first=True)
-        self.layer_norm_cf = nn.LayerNorm(D)
+        self.layer_norm_cf = nn.Identity()#nn.LayerNorm(D)
 
         self.freeze_encoders = freeze_encoders
 
-   def forward(self, waveforms: torch.Tensor) -> torch.Tensor:
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=self.lr)
+
+    def forward(self, waveforms: torch.Tensor) -> torch.Tensor:
         """Pass forward
 
         Args:
@@ -83,7 +91,6 @@ class PyanNetMultiChannel(PyanNet):
         Returns:
             scores (torch.tensor): Tensor of scores with shape (batch, frame, classes)
         """
-
 
         if self.freeze_encoders:
             with torch.no_grad():
@@ -137,7 +144,7 @@ class PyanNetMultiChannel(PyanNet):
         # Cross frame attention (based on https://arxiv.org/abs/2110.04694)
         C = outputs_attn_cc.shape[1]
         outputs_attn_cf = [
-            self.layer_norm_cc( 
+            self.layer_norm_cf( 
                     outputs_attn_cc[:, c, :, :] + self.attention_cc(outputs_attn_cc[:, c, :, :], outputs_attn_cc[:, c, :, :], outputs_attn_cc[:, c, :, :])[0] 
                 )
                 for c in range(C)

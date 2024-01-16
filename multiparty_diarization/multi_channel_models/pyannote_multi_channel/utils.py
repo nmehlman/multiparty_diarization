@@ -2,13 +2,22 @@ from torch import Tensor
 from torch_audiomentations.utils.object_dict import ObjectDict
 from torch_audiomentations import Identity
 from pyannote.audio.tasks.segmentation.speaker_diarization import SpeakerDiarization
+from pyannote.audio.utils.permutation import permutate
 
 import math
 import random
 import warnings
 from io import IOBase
+import torch
+from torch.utils.data._utils.collate import default_collate
 from pathlib import Path
 from typing import Mapping, Optional, Text, Tuple, Union
+
+from pyannote.database.protocol.protocol import Scope, Subset
+from pyannote.core import Segment, SlidingWindowFeature
+
+Subsets = list(Subset.__args__)
+Scopes = list(Scope.__args__)
 
 import numpy as np
 import torch.nn.functional as F
@@ -35,6 +44,11 @@ class MultiChannelSpeakerDiarization(SpeakerDiarization):
         super().__init__(*args, **kwargs)
         if isinstance(self.augmentation, Identity):
             self.augmentation = MultiChannelIdentity()
+
+
+    def collate_X(self, batch) -> torch.Tensor:
+        batch_X = torch.stack([b["X"] for b in batch])
+        return batch_X
 
 
 def get_torchaudio_info(file: AudioFile):
