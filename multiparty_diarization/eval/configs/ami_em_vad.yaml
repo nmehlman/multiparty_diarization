@@ -1,0 +1,21 @@
+model: 'em_vad'
+
+use_oracle: false
+
+model_kwargs:
+  window_size: 512
+  window_offset: 128
+  speech_thr: 0.5
+  convergence_thr: 0.0001
+  max_steps: 100
+  max_agg: false
+
+dataset: 'ami_multichannel'
+
+dataset_kwargs:
+  array_root_path: '/proj/disney/amicorpus_array'
+  lav_root_path: '/proj/disney/amicorpus_lav'
+  sample_len_s: 60.0
+  min_speaker_gap_s: 1.0 
+
+save_dir: "/home/nmehlman/disney/multiparty_diarization/results/ami_em/"

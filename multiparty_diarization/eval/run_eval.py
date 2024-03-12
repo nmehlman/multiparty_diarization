@@ -1,7 +1,10 @@
 from multiparty_diarization.utils import load_configs
-from multiparty_diarization.single_channel_models.pyannote_model import PyannoteDiarization
-from multiparty_diarization.single_channel_models.nemo_model import NEMO_Diarization
+from multiparty_diarization.models.single_channel_models.pyannote_model import PyannoteDiarization
+from multiparty_diarization.models.single_channel_models.nemo_model import NEMO_Diarization
+from multiparty_diarization.models.multi_channel_models.late_fusion_VAD.late_fusion_VAD_model import LateFusionVAD
+from multiparty_diarization.models.multi_channel_models.em_vad.expectation_maximization_vad import EMCloseTalkVAD
 from multiparty_diarization.datasets.ami import AMI
+from multiparty_diarization.datasets.ami_multichannel import AMIMultiChannel
 from multiparty_diarization.datasets.dinner_party import DinnerParty
 from multiparty_diarization.eval.metrics import compute_sample_diarization_metrics
 
@@ -13,12 +16,15 @@ import os
 
 DATASETS = {
     "ami": AMI,
-    "dipco": DinnerParty
+    "dipco": DinnerParty,
+    "ami_multichannel": AMIMultiChannel
 }
 
 MODELS = {
     "pyannote": PyannoteDiarization,
-    "nemo": NEMO_Diarization
+    "nemo": NEMO_Diarization,
+    "vad_fusion": LateFusionVAD,
+    "em_vad": EMCloseTalkVAD
 }
 
 if __name__ == "__main__":
@@ -31,6 +37,7 @@ if __name__ == "__main__":
     # Load model and dataset
     model = MODELS[ config['model'] ](**config['model_kwargs'])
     dataset = DATASETS[ config['dataset'] ](**config["dataset_kwargs"])
+    diarize_kwargs = config.get('diarize_kwargs', {})
 
     sample_results = []
     for i, (audio, reference, info) in tqdm.tqdm(
@@ -41,15 +48,15 @@ if __name__ == "__main__":
         
         # Run diarization and compute metrics
         try:
-            
             if config['use_oracle']: # Use oracle info
                 oracle_info = dataset.generate_oracle_info(i)
-                hypothesis = model(audio, **config['diarize_kwargs'], **oracle_info)
+                hypothesis = model(audio, **diarize_kwargs, **oracle_info)
             
             else: # No oracle info
-                hypothesis = model(audio, **config['diarize_kwargs'])
+                hypothesis = model(audio, **diarize_kwargs)
+            
             results = compute_sample_diarization_metrics(reference, hypothesis)
-        
+            
         except IndexError: # Handel corner cases 
             results = {
                 "der": 1.0,

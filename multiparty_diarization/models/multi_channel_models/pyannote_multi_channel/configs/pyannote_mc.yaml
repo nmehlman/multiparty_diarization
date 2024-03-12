@@ -17,11 +17,11 @@ trainer:
   devices: 1
   accelerator: "gpu"
   val_check_interval: 50
-  gradient_clip_val: 0.01
+  gradient_clip_val: 0.001
   log_every_n_steps: 50
   #overfit_batches: 32
 
 tensorboard:
   save_dir: "/home/nmehlman/logs/pyannote_mc"
   name: "test"
-  version: null     # Automatic versioning if set to null (recommended)
+  version: 0     # Automatic versioning if set to null (recommended)

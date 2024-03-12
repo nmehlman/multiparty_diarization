@@ -31,7 +31,7 @@ class AMI(DiarizationDataset):
         self.sample_rate = 16000
 
         word_dir = os.path.join(root_path, 'words') # Contains transcript info
-        meeting_IDs = [subdir for subdir in next(os.walk(root_path))[1] if subdir[0].isupper()] # List all meetings
+        meeting_IDs = [subdir for subdir in next(os.walk(root_path))[1] if subdir[0].isupper() and subdir != 'MultiChannel'] # List all meetings
 
         meeting_word_XML_files = { # List XML transcript files associated each meeting (one per participant)
             meeting_ID: [
